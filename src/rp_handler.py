@@ -32,38 +32,22 @@ torch.cuda.empty_cache()
 class ModelHandler:
     def __init__(self):
         self.base = None
-        self.refiner = None
         self.load_models()
 
     def load_base(self):
-        vae = AutoencoderKL.from_pretrained(
-            "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
         base_pipe = StableDiffusionXLPipeline.from_pretrained(
-            "stabilityai/stable-diffusion-xl-base-1.0", vae=vae,
+            "AstraliteHeart/pony-diffusion-v6",
             torch_dtype=torch.float16, variant="fp16", use_safetensors=True, add_watermarker=False
         )
         base_pipe = base_pipe.to("cuda", silence_dtype_warnings=True)
         base_pipe.enable_xformers_memory_efficient_attention()
         return base_pipe
 
-    def load_refiner(self):
-        vae = AutoencoderKL.from_pretrained(
-            "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
-        refiner_pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(
-            "stabilityai/stable-diffusion-xl-refiner-1.0", vae=vae,
-            torch_dtype=torch.float16, variant="fp16", use_safetensors=True, add_watermarker=False
-        )
-        refiner_pipe = refiner_pipe.to("cuda", silence_dtype_warnings=True)
-        refiner_pipe.enable_xformers_memory_efficient_attention()
-        return refiner_pipe
-
     def load_models(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future_base = executor.submit(self.load_base)
-            future_refiner = executor.submit(self.load_refiner)
 
             self.base = future_base.result()
-            self.refiner = future_refiner.result()
 
 
 MODELS = ModelHandler()
@@ -125,36 +109,27 @@ def generate_image(job):
     MODELS.base.scheduler = make_scheduler(
         job_input['scheduler'], MODELS.base.scheduler.config)
 
-    if starting_image:  # If image_url is provided, run only the refiner pipeline
+    if starting_image:
         init_image = load_image(starting_image).convert("RGB")
-        output = MODELS.refiner(
+        output = MODELS.base(
             prompt=job_input['prompt'],
-            num_inference_steps=job_input['refiner_inference_steps'],
+            num_inference_steps=job_input['num_inference_steps'],
             strength=job_input['strength'],
             image=init_image,
             generator=generator
         ).images
     else:
-        # Generate latent image using pipe
-        image = MODELS.base(
-            prompt=job_input['prompt'],
-            negative_prompt=job_input['negative_prompt'],
-            height=job_input['height'],
-            width=job_input['width'],
-            num_inference_steps=job_input['num_inference_steps'],
-            guidance_scale=job_input['guidance_scale'],
-            denoising_end=job_input['high_noise_frac'],
-            output_type="latent",
-            num_images_per_prompt=job_input['num_images'],
-            generator=generator
-        ).images
-
         try:
-            output = MODELS.refiner(
+            # Generate latent image using pipe
+            image = MODELS.base(
                 prompt=job_input['prompt'],
-                num_inference_steps=job_input['refiner_inference_steps'],
-                strength=job_input['strength'],
-                image=image,
+                negative_prompt=job_input['negative_prompt'],
+                height=job_input['height'],
+                width=job_input['width'],
+                num_inference_steps=job_input['num_inference_steps'],
+                guidance_scale=job_input['guidance_scale'],
+                denoising_end=job_input['high_noise_frac'],
+                output_type="latent",
                 num_images_per_prompt=job_input['num_images'],
                 generator=generator
             ).images
