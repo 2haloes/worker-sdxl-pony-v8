@@ -121,7 +121,7 @@ def generate_image(job):
     else:
         try:
             # Generate latent image using pipe
-            image = MODELS.base(
+            output = MODELS.base(
                 prompt=job_input['prompt'],
                 negative_prompt=job_input['negative_prompt'],
                 height=job_input['height'],
@@ -129,7 +129,6 @@ def generate_image(job):
                 num_inference_steps=job_input['num_inference_steps'],
                 guidance_scale=job_input['guidance_scale'],
                 denoising_end=job_input['high_noise_frac'],
-                output_type="latent",
                 num_images_per_prompt=job_input['num_images'],
                 generator=generator
             ).images
