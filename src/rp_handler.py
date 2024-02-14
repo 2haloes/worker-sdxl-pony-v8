@@ -35,8 +35,8 @@ class ModelHandler:
         self.load_models()
 
     def load_base(self):
-        base_pipe = StableDiffusionXLPipeline.from_pretrained(
-            "AstraliteHeart/pony-diffusion-v6",
+        base_pipe = StableDiffusionXLPipeline.from_single_file(
+            "https://huggingface.co/AstraliteHeart/pony-diffusion-v6/blob/main/v6.safetensors",
             torch_dtype=torch.float16, variant="fp16", use_safetensors=True, add_watermarker=False
         )
         base_pipe = base_pipe.to("cuda", silence_dtype_warnings=True)

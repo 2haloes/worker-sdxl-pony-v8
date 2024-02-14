@@ -1,7 +1,7 @@
 # builder/model_fetcher.py
 
 import torch
-from diffusers import StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, AutoencoderKL
+from diffusers import StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline, AutoencoderKL, StableDiffusionPipeline
 
 
 def fetch_pretrained_model(model_class, model_name, **kwargs):
@@ -30,8 +30,9 @@ def get_diffusion_pipelines():
         "use_safetensors": True
     }
 
-    pipe = fetch_pretrained_model(StableDiffusionXLPipeline,
-                                  "AstraliteHeart/pony-diffusion-v6", **common_args)
+    pipe = StableDiffusionXLPipeline.from_single_file(
+                                  "https://huggingface.co/AstraliteHeart/pony-diffusion-v6/blob/main/v6.safetensors"
+                                  )
 
     return pipe
 
